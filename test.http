@@ -1,0 +1,81 @@
+### Send a normal order
+POST http://localhost:5000/order
+Content-Type: application/json
+
+{
+  "item_id": "ITEM-001",
+  "quantity": 1,
+  "amount": 50.0
+}
+
+### ─── FAULT INJECTION ─────────────────────────────────────────
+
+### Inject payment crash (circuit breaker test)
+POST http://localhost:5001/fault/crash
+Content-Type: application/json
+
+{ "enabled": true }
+
+### Set payment fail rate 70%
+POST http://localhost:5001/fault/fail_rate
+Content-Type: application/json
+
+{ "rate": 0.7 }
+
+### Check circuit breaker state
+GET http://localhost:5001/payment/health
+
+### Reset circuit breaker
+POST http://localhost:5001/fault/cb/reset
+
+### Inject inventory latency (timeout test)
+POST http://localhost:5002/fault/latency
+Content-Type: application/json
+
+{ "enabled": true, "latency_ms": 5000 }
+
+### Exhaust inventory thread pool (bulkhead test)
+POST http://localhost:5002/fault/exhaust
+Content-Type: application/json
+
+{ "enabled": true }
+
+### Set notification transient failure rate (retry test)
+POST http://localhost:5003/fault/transient
+Content-Type: application/json
+
+{ "rate": 0.8 }
+
+### ─── RESET ALL FAULTS ────────────────────────────────────────
+
+### Reset order faults
+POST http://localhost:5000/fault/reset
+
+### Reset payment faults
+POST http://localhost:5001/fault/reset
+
+### Reset inventory faults
+POST http://localhost:5002/fault/reset
+
+### Reset notification faults
+POST http://localhost:5003/fault/reset
+
+### Reset inventory stock
+POST http://localhost:5002/inventory/stock/reset
+
+### ─── HEALTH CHECKS ─────────────────────────────────────────
+
+### Order health
+GET http://localhost:5000/order/health
+
+### Payment health + CB state
+GET http://localhost:5001/payment/health
+
+### Inventory health + pool status
+GET http://localhost:5002/inventory/health
+
+### Notification health + retry config
+GET http://localhost:5003/notify/health
+
+### View current stock
+GET http://localhost:5002/inventory/stock

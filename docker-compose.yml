@@ -1,0 +1,141 @@
+version: "3.9"
+
+
+networks:
+  testbed:
+    driver: bridge
+
+# Shared env block for OTEL 
+x-otel-env: &otel-env
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318/v1/traces"
+  OTEL_TRACES_EXPORTER: "otlp"
+
+services:
+
+  #  Order Service 
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "5000:5000"
+    environment:
+      <<: *otel-env
+      PAYMENT_URL:       "http://payment-service:5001"
+      INVENTORY_URL:     "http://inventory-service:5002"
+      NOTIFICATION_URL:  "http://notification-service:5003"
+      # ── Fault tolerance config (override in config overlays) ──
+      PAYMENT_TIMEOUT:   "3.0"
+      INVENTORY_TIMEOUT: "3.0"
+      NOTIFY_TIMEOUT:    "2.0"
+    networks: [testbed]
+    depends_on: [payment-service, inventory-service, notification-service]
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/order/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  #  Payment Service 
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    ports:
+      - "5001:5001"
+    environment:
+      <<: *otel-env
+      # ── Circuit Breaker config ──
+      CB_FAILURE_THRESHOLD: "3"
+      CB_RECOVERY_TIMEOUT:  "10.0"
+      CB_SUCCESS_THRESHOLD: "2"
+    networks: [testbed]
+    depends_on: [jaeger]
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/payment/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Inventory Service ─
+  inventory-service:
+    build: ./inventory-service
+    container_name: inventory-service
+    ports:
+      - "5002:5002"
+    environment:
+      <<: *otel-env
+      # ── Bulkhead config ──
+      BULKHEAD_CHECK_POOL:   "5"
+      BULKHEAD_RESERVE_POOL: "3"
+      BULKHEAD_TIMEOUT:      "4.0"
+    networks: [testbed]
+    depends_on: [jaeger]
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/inventory/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  #  Notification Service 
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "5003:5003"
+    environment:
+      <<: *otel-env
+      # ── Retry config ──
+      RETRY_MAX:            "3"
+      RETRY_BASE_DELAY:     "0.5"
+      RETRY_BACKOFF_FACTOR: "2.0"
+      RETRY_MAX_DELAY:      "10.0"
+      RETRY_JITTER:         "true"
+    networks: [testbed]
+    depends_on: [jaeger]
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/notify/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  #  Jaeger (Distributed Tracing) 
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: jaeger
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4318:4318"     # OTLP HTTP receiver
+      - "4317:4317"     # OTLP gRPC receiver
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks: [testbed]
+    restart: unless-stopped
+
+  #  Prometheus (Metrics Scraping) 
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks: [testbed]
+    restart: unless-stopped
+
+  #  Grafana (Metrics Dashboard)
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "testbed"
+    volumes:
+      - ./observability/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./observability/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    networks: [testbed]
+    depends_on: [prometheus]
+    restart: unless-stopped
