@@ -1,0 +1,29 @@
+version: "3.9"
+# ─── CONFIG OVERLAY: BASELINE (Config 1) ──────────────────────────────────────
+# No real fault tolerance — very long timeouts, circuit breaker essentially off,
+
+services:
+  order-service:
+    environment:
+      PAYMENT_TIMEOUT:   "30.0"   # effectively no timeout
+      INVENTORY_TIMEOUT: "30.0"
+      NOTIFY_TIMEOUT:    "30.0"
+
+  payment-service:
+    environment:
+      CB_FAILURE_THRESHOLD: "999"   # circuit breaker 
+      CB_RECOVERY_TIMEOUT:  "120.0"
+      CB_SUCCESS_THRESHOLD: "10"
+
+  inventory-service:
+    environment:
+      BULKHEAD_CHECK_POOL:   "50"   #  pool 
+      BULKHEAD_RESERVE_POOL: "50"
+      BULKHEAD_TIMEOUT:      "30.0"
+
+  notification-service:
+    environment:
+      RETRY_MAX:            "0"     # no retries
+      RETRY_BASE_DELAY:     "0"
+      RETRY_BACKOFF_FACTOR: "1.0"
+      RETRY_MAX_DELAY:      "0"

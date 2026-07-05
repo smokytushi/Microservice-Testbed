@@ -1,0 +1,29 @@
+version: "3.9"
+# ─── CONFIG OVERLAY: STATIC (Config 2) ────────────────────────────────────────
+# Fixed fault tolerance parameters 
+
+services:
+  order-service:
+    environment:
+      PAYMENT_TIMEOUT:   "3.0"
+      INVENTORY_TIMEOUT: "3.0"
+      NOTIFY_TIMEOUT:    "2.0"
+
+  payment-service:
+    environment:
+      CB_FAILURE_THRESHOLD: "3"
+      CB_RECOVERY_TIMEOUT:  "10.0"
+      CB_SUCCESS_THRESHOLD: "2"
+
+  inventory-service:
+    environment:
+      BULKHEAD_CHECK_POOL:   "5"
+      BULKHEAD_RESERVE_POOL: "3"
+      BULKHEAD_TIMEOUT:      "4.0"
+
+  notification-service:
+    environment:
+      RETRY_MAX:            "3"
+      RETRY_BASE_DELAY:     "0.5"
+      RETRY_BACKOFF_FACTOR: "2.0"
+      RETRY_MAX_DELAY:      "10.0"

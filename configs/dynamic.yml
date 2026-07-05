@@ -1,0 +1,29 @@
+version: "3.9"
+# ─── CONFIG OVERLAY: DYNAMIC (Config 3) ───────────────────────────────────────
+# Adaptive parameters — tighter thresholds that respond faster to failure signals.
+
+services:
+  order-service:
+    environment:
+      PAYMENT_TIMEOUT:   "1.5"    # tighter — faster failure detection
+      INVENTORY_TIMEOUT: "1.5"
+      NOTIFY_TIMEOUT:    "1.0"
+
+  payment-service:
+    environment:
+      CB_FAILURE_THRESHOLD: "2"   # open after 2 failures (more sensitive)
+      CB_RECOVERY_TIMEOUT:  "5.0" # try recovery sooner
+      CB_SUCCESS_THRESHOLD: "1"   # close faster on recovery
+
+  inventory-service:
+    environment:
+      BULKHEAD_CHECK_POOL:   "8"  # larger pool for higher concurrency
+      BULKHEAD_RESERVE_POOL: "5"
+      BULKHEAD_TIMEOUT:      "2.0"
+
+  notification-service:
+    environment:
+      RETRY_MAX:            "5"     # more retries allowed
+      RETRY_BASE_DELAY:     "0.2"   # faster first retry
+      RETRY_BACKOFF_FACTOR: "1.5"   # gentler backoff curve
+      RETRY_MAX_DELAY:      "5.0"
