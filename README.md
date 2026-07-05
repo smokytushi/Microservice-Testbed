@@ -49,7 +49,6 @@ Observability Stack:
 
 ### Step 1 — Clone / Set up directory
 ```bash
-# Your project should have this structure:
 ecommerce-testbed/
 ├── order-service/
 ├── payment-service/
