@@ -1,0 +1,6 @@
+scenario,config,total_requests,success,errors,success_rate,avg_latency_ms,timestamp
+S1_payment_crash,dynamic,20,8,12,40.0,989.54,2026-06-11T12:45:02.584826
+S2_inventory_latency,dynamic,18,5,13,27.8,2800.42,2026-06-11T12:46:04.668526
+S3_pool_exhaustion,dynamic,25,7,18,28.0,2800.92,2026-06-11T12:46:41.248240
+S4_notification_transient,dynamic,20,17,3,85.0,1146.49,2026-06-11T12:47:16.353087
+S5_cascading_failure,dynamic,20,1,19,5.0,551.03,2026-06-11T12:47:39.659579
